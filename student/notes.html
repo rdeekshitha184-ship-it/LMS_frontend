@@ -119,8 +119,8 @@
                         📅 ${formatDate(n.created_at)} • By ${n.uploaded_by}
                     </p>
                     <div style="display:flex;gap:8px;">
-                        <a href="${n.file}" target="_blank">
-                            <button class="btn" 
+                        <a href="https://docs.google.com/viewer?url=${encodeURIComponent(n.file)}" target="_blank">
+                          <button class="btn" 
                                 style="background:#e8f0fe;color:#1a73e8;
                                        width:auto;padding:7px 14px;
                                        font-size:13px;font-weight:600;">

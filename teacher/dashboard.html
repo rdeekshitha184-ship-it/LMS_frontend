@@ -151,7 +151,8 @@
                 </div>
                 <p class="card-meta">
                     Uploaded on ${formatDate(n.created_at)} •
-                    <a href="${n.file}" target="_blank" style="color:#1a73e8;">View PDF</a>
+                     <a href="https://docs.google.com/viewer?url=${encodeURIComponent(n.file)}" 
+                        target="_blank" style="color:#1a73e8;">View PDF</a>
                 </p>
             </div>
         `).join('');
@@ -170,6 +171,27 @@
 
     loadDashboard();
 </script>
-
+<div class="bottom-nav">
+    <a href="dashboard.html" class="active">
+        <span class="nav-icon">🏠</span>
+        <span>Home</span>
+    </a>
+    <a href="notes.html">
+        <span class="nav-icon">📚</span>
+        <span>Notes</span>
+    </a>
+    <a href="assignments.html">
+        <span class="nav-icon">📝</span>
+        <span>Tasks</span>
+    </a>
+    <a href="notices.html">
+        <span class="nav-icon">📢</span>
+        <span>Notices</span>
+    </a>
+    <a href="timetable.html">
+        <span class="nav-icon">🕐</span>
+        <span>Time</span>
+    </a>
+</div>
 </body>
 </html>
