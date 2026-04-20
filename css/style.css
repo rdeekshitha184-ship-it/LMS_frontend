@@ -363,3 +363,150 @@ tr:hover td {
 .empty-state p {
     font-size: 15px;
 }
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width: 768px) {
+
+    /* SIDEBAR — hide on mobile */
+    .sidebar {
+        display: none;
+    }
+
+    /* LAYOUT — full width on mobile */
+    .layout {
+        display: block;
+    }
+
+    /* MAIN CONTENT — full width */
+    .main-content {
+        padding: 16px;
+    }
+
+    /* NAVBAR — smaller on mobile */
+    .navbar {
+        padding: 0 16px;
+        height: 56px;
+    }
+
+    .navbar .logo {
+        font-size: 15px;
+    }
+
+    .navbar .user-info span {
+        display: none;
+    }
+
+    /* STATS GRID — 2 columns on mobile */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 14px;
+    }
+
+    .stat-card .stat-number {
+        font-size: 24px;
+    }
+
+    /* CARDS — full width */
+    .card {
+        padding: 14px;
+    }
+
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    /* LOGIN BOX — full width on mobile */
+    .login-box {
+        margin: 16px;
+        padding: 28px 20px;
+    }
+
+    /* PAGE TITLE */
+    .page-title {
+        font-size: 18px;
+    }
+
+    /* QUICK ACCESS GRID — 2 columns */
+    .quick-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* PERIOD ROW — stack on mobile */
+    .period-row {
+        grid-template-columns: 45px 1fr !important;
+        gap: 8px !important;
+    }
+
+    /* BUTTONS — full width on mobile */
+    .card .btn {
+        width: 100%;
+        margin-top: 6px;
+    }
+
+    /* FILTER BUTTONS — wrap */
+    .filter-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    /* FORM — full width */
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        font-size: 16px; /* prevents zoom on iOS */
+    }
+}
+
+/* ===== BOTTOM NAV FOR MOBILE ===== */
+@media (max-width: 768px) {
+
+    /* Add padding at bottom for nav */
+    .main-content {
+        padding-bottom: 80px;
+    }
+
+    /* Bottom navigation bar */
+    .bottom-nav {
+        display: flex !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid #e0e0e0;
+        padding: 8px 0;
+        z-index: 100;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+
+    .bottom-nav a {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-decoration: none;
+        color: #888;
+        font-size: 11px;
+        gap: 3px;
+        padding: 4px 0;
+    }
+
+    .bottom-nav a.active {
+        color: #1a73e8;
+    }
+
+    .bottom-nav a .nav-icon {
+        font-size: 20px;
+    }
+}
+
+/* Hide bottom nav on desktop */
+.bottom-nav {
+    display: none;
+}
