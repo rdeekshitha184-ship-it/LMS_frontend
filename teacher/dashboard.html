@@ -151,8 +151,7 @@
                 </div>
                 <p class="card-meta">
                     Uploaded on ${formatDate(n.created_at)} •
-                     <a href="https://docs.google.com/viewer?url=${encodeURIComponent(n.file)}" 
-                        target="_blank" style="color:#1a73e8;">View PDF</a>
+                     <a href="${n.file}" target="_blank">View PDF</a>
                 </p>
             </div>
         `).join('');

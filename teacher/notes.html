@@ -238,8 +238,7 @@
                         📅 ${formatDate(n.created_at)} • By ${n.uploaded_by}
                     </p>
                     <div style="display:flex; gap:8px;">
-        
-                        <a href="https://docs.google.com/viewer?url=${encodeURIComponent(n.file)}" target="_blank">    
+                        <a href="${n.file}" target="_blank">       
                             <button class="btn btn-success" 
                                 style="width:auto; padding:7px 14px; font-size:13px;">
                                 👁️ View PDF
