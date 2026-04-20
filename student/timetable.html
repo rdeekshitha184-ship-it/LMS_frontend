@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">🏫 LMS — Student</div>
+    <div class="user-info">
+        <span>👋 <strong id="navUsername"></strong></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<div class="layout">
+    <div class="sidebar">
+        <a href="dashboard.html">🏠 <span>Dashboard</span></a>
+        <a href="notes.html">📚 <span>Notes</span></a>
+        <a href="assignments.html">📝 <span>Assignments</span></a>
+        <a href="notices.html">📢 <span>Notices</span></a>
+        <a href="timetable.html" class="active">🕐 <span>Timetable</span></a>
+    </div>
+
+    <div class="main-content">
+        <h1 class="page-title">🕐 Class Timetable</h1>
+        <p class="page-subtitle" id="todayInfo">Loading today's schedule...</p>
+
+        <!-- DAY TABS -->
+        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+            <button class="filter-btn" id="btn-today"
+                onclick="showToday()">📍 Today</button>
+            <button class="filter-btn" onclick="showDay('mon',this)">Mon</button>
+            <button class="filter-btn" onclick="showDay('tue',this)">Tue</button>
+            <button class="filter-btn" onclick="showDay('wed',this)">Wed</button>
+            <button class="filter-btn" onclick="showDay('thu',this)">Thu</button>
+            <button class="filter-btn" onclick="showDay('fri',this)">Fri</button>
+            <button class="filter-btn" onclick="showDay('sat',this)">Sat</button>
+            <button class="filter-btn" onclick="showAll(this)">All Week</button>
+        </div>
+
+        <div id="timetableView">
+            <div class="loading">Loading timetable...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .filter-btn {
+        padding:8px 18px; border:2px solid #e0e0e0;
+        border-radius:20px; background:white;
+        font-size:13px; cursor:pointer;
+        font-weight:500; transition:all 0.2s;
+    }
+    .filter-btn:hover { border-color:#1a73e8; color:#1a73e8; }
+    .active-filter    { background:#1a73e8 !important;
+                        color:white !important;
+                        border-color:#1a73e8 !important; }
+
+    .period-row {
+        display:grid;
+        grid-template-columns:60px 100px 1fr 1fr;
+        align-items:center; gap:12px;
+        padding:14px 16px; background:white;
+        border-radius:10px; margin-bottom:8px;
+        box-shadow:0 2px 6px rgba(0,0,0,0.05);
+        font-size:14px;
+    }
+    .period-num {
+        background:#1a73e8; color:white;
+        border-radius:50%; width:34px; height:34px;
+        display:flex; align-items:center;
+        justify-content:center;
+        font-weight:700; font-size:13px;
+    }
+    .time-badge {
+        font-size:12px; color:#666;
+        background:#f0f2f5; padding:4px 8px;
+        border-radius:6px; white-space:nowrap;
+    }
+    .day-title {
+        font-size:15px; font-weight:700;
+        color:#1a73e8; margin-bottom:10px;
+        padding:6px 14px; background:#e8f0fe;
+        border-radius:8px; display:inline-block;
+    }
+    .today-highlight { border-left:4px solid #1a73e8; }
+</style>
+
+<script>
+    const API   = 'https://lms-backend-paui.onrender.com/api';
+    const token = localStorage.getItem('access_token');
+    const role  = localStorage.getItem('role');
+
+    if (!token || role !== 'student') {
+        window.location.href = '../index.html';
+    }
+
+    document.getElementById('navUsername').textContent =
+        localStorage.getItem('username');
+
+    const headers  = { 'Authorization': `Bearer ${token}` };
+    let allEntries = [];
+
+    const DAY_NAMES = {
+        mon:'Monday', tue:'Tuesday', wed:'Wednesday',
+        thu:'Thursday', fri:'Friday', sat:'Saturday'
+    };
+    const DAY_ORDER = ['mon','tue','wed','thu','fri','sat'];
+    const JS_TO_DAY = {
+        0:null, 1:'mon', 2:'tue',
+        3:'wed', 4:'thu', 5:'fri', 6:'sat'
+    };
+
+    function getTodayKey() {
+        return JS_TO_DAY[new Date().getDay()];
+    }
+
+    async function loadTimetable() {
+        try {
+            const res  = await fetch(`${API}/timetable/`, { headers });
+            allEntries = await res.json();
+            showToday();
+        } catch (err) {
+            document.getElementById('timetableView').innerHTML =
+                '<p style="color:red;">Failed to load timetable.</p>';
+        }
+    }
+
+    function showToday() {
+        const todayKey = getTodayKey();
+        document.querySelectorAll('.filter-btn').forEach(b =>
+            b.classList.remove('active-filter'));
+        document.getElementById('btn-today').classList.add('active-filter');
+
+        if (!todayKey) {
+            document.getElementById('todayInfo').textContent =
+                "It's Sunday — enjoy your day off! 🎉";
+            renderGrouped(allEntries);
+            return;
+        }
+
+        document.getElementById('todayInfo').textContent =
+            `Today is ${DAY_NAMES[todayKey]} — showing today's classes`;
+
+        const todayEntries = allEntries.filter(e => e.day === todayKey);
+        renderSingleDay(todayKey, todayEntries, true);
+    }
+
+    function showDay(day, btn) {
+        document.querySelectorAll('.filter-btn').forEach(b =>
+            b.classList.remove('active-filter'));
+        btn.classList.add('active-filter');
+        document.getElementById('todayInfo').textContent =
+            `Showing ${DAY_NAMES[day]}'s schedule`;
+        const entries = allEntries.filter(e => e.day === day);
+        renderSingleDay(day, entries, false);
+    }
+
+    function showAll(btn) {
+        document.querySelectorAll('.filter-btn').forEach(b =>
+            b.classList.remove('active-filter'));
+        btn.classList.add('active-filter');
+        document.getElementById('todayInfo').textContent =
+            'Showing full week schedule';
+        renderGrouped(allEntries);
+    }
+
+    function renderSingleDay(day, entries, highlight) {
+        const container = document.getElementById('timetableView');
+        if (entries.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>No classes scheduled for ${DAY_NAMES[day]}</p>
+                </div>`;
+            return;
+        }
+        entries.sort((a,b) => a.period - b.period);
+        container.innerHTML = `
+            <div class="day-title">📅 ${DAY_NAMES[day]}</div>
+            ${entries.map(p => `
+                <div class="period-row ${highlight?'today-highlight':''}">
+                    <div class="period-num">P${p.period}</div>
+                    <span class="time-badge">
+                        ${formatTime(p.start_time)}–${formatTime(p.end_time)}
+                    </span>
+                    <span style="font-weight:600;">${p.subject}</span>
+                    <span style="color:#666;">👨‍🏫 ${p.teacher_name}</span>
+                </div>`).join('')}`;
+    }
+
+    function renderGrouped(entries) {
+        const container = document.getElementById('timetableView');
+        if (entries.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>Timetable not set up yet</p>
+                </div>`;
+            return;
+        }
+
+        const grouped = {};
+        DAY_ORDER.forEach(d => grouped[d] = []);
+        entries.forEach(e => { if(grouped[e.day]) grouped[e.day].push(e); });
+
+        const todayKey = getTodayKey();
+        let html = '';
+        DAY_ORDER.forEach(day => {
+            const periods = grouped[day];
+            if (periods.length === 0) return;
+            periods.sort((a,b) => a.period - b.period);
+            const isToday = day === todayKey;
+            html += `
+                <div style="margin-bottom:24px;">
+                    <div class="day-title" 
+                         style="${isToday?'background:#1a73e8;color:white;':''}">
+                        📅 ${DAY_NAMES[day]} ${isToday?'(Today)':''}
+                    </div>
+                    ${periods.map(p => `
+                        <div class="period-row 
+                             ${isToday?'today-highlight':''}">
+                            <div class="period-num">P${p.period}</div>
+                            <span class="time-badge">
+                                ${formatTime(p.start_time)}–
+                                ${formatTime(p.end_time)}
+                            </span>
+                            <span style="font-weight:600;">${p.subject}</span>
+                            <span style="color:#666;">
+                                👨‍🏫 ${p.teacher_name}
+                            </span>
+                        </div>`).join('')}
+                </div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function formatTime(time) {
+        const [h,m] = time.split(':');
+        const hour  = parseInt(h);
+        const ampm  = hour >= 12 ? 'PM' : 'AM';
+        const h12   = hour % 12 || 12;
+        return `${h12}:${m} ${ampm}`;
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = '../index.html';
+    }
+
+    loadTimetable();
+</script>
+</body>
+</html>

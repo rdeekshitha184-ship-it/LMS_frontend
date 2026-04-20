@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="logo">🏫 LMS — Teacher</div>
+    <div class="user-info">
+        <span>👋 <strong id="navUsername"></strong></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <a href="dashboard.html" class="active">🏠 <span>Dashboard</span></a>
+        <a href="notes.html">📚 <span>Upload Notes</span></a>
+        <a href="assignments.html">📝 <span>Assignments</span></a>
+        <a href="notices.html">📢 <span>Post Notices</span></a>
+        <a href="timetable.html">🕐 <span>Timetable</span></a>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-content">
+        <h1 class="page-title">Teacher Dashboard</h1>
+        <p class="page-subtitle">Manage your class from here</p>
+
+        <!-- STATS -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="notesCount">...</div>
+                <div class="stat-label">📚 Notes Uploaded</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="assignmentsCount">...</div>
+                <div class="stat-label">📝 Assignments</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="noticesCount">...</div>
+                <div class="stat-label">📢 Notices Posted</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">60</div>
+                <div class="stat-label">👥 Students</div>
+            </div>
+        </div>
+
+        <!-- QUICK ACTIONS -->
+        <h2 style="font-size:17px; margin-bottom:14px; color:#333;">⚡ Quick Actions</h2>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:28px;">
+            <a href="notes.html" style="text-decoration:none;">
+                <div class="card" style="text-align:center; cursor:pointer; border:2px solid #e8f0fe;">
+                    <div style="font-size:36px; margin-bottom:8px;">📚</div>
+                    <div style="font-weight:600; color:#1a73e8;">Upload Notes</div>
+                    <div style="font-size:13px; color:#888; margin-top:4px;">Add PDF notes for students</div>
+                </div>
+            </a>
+            <a href="assignments.html" style="text-decoration:none;">
+                <div class="card" style="text-align:center; cursor:pointer; border:2px solid #e6f4ea;">
+                    <div style="font-size:36px; margin-bottom:8px;">📝</div>
+                    <div style="font-weight:600; color:#34a853;">Create Assignment</div>
+                    <div style="font-size:13px; color:#888; margin-top:4px;">Set assignments with due dates</div>
+                </div>
+            </a>
+            <a href="notices.html" style="text-decoration:none;">
+                <div class="card" style="text-align:center; cursor:pointer; border:2px solid #fce8e6;">
+                    <div style="font-size:36px; margin-bottom:8px;">📢</div>
+                    <div style="font-weight:600; color:#ea4335;">Post Notice</div>
+                    <div style="font-size:13px; color:#888; margin-top:4px;">Announce holidays & events</div>
+                </div>
+            </a>
+            <a href="timetable.html" style="text-decoration:none;">
+                <div class="card" style="text-align:center; cursor:pointer; border:2px solid #fff3e0;">
+                    <div style="font-size:36px; margin-bottom:8px;">🕐</div>
+                    <div style="font-weight:600; color:#fa7b17;">Timetable</div>
+                    <div style="font-size:13px; color:#888; margin-top:4px;">Manage class schedule</div>
+                </div>
+            </a>
+        </div>
+
+        <!-- RECENT NOTES -->
+        <h2 style="font-size:17px; margin-bottom:14px; color:#333;">📚 Recently Uploaded Notes</h2>
+        <div id="notesList">
+            <div class="loading">Loading...</div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const API = 'https://lms-backend-paui.onrender.com/api';
+    const token = localStorage.getItem('access_token');
+    const role  = localStorage.getItem('role');
+
+    // Check login
+    if (!token || role !== 'teacher') {
+        window.location.href = '../index.html';
+    }
+
+    document.getElementById('navUsername').textContent = localStorage.getItem('username');
+
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    async function loadDashboard() {
+        try {
+            const [notesRes, assignRes, noticeRes] = await Promise.all([
+                fetch(`${API}/notes/`, { headers }),
+                fetch(`${API}/assignments/`, { headers }),
+                fetch(`${API}/notices/`, { headers })
+            ]);
+
+            const notes       = await notesRes.json();
+            const assignments = await assignRes.json();
+            const notices     = await noticeRes.json();
+
+            document.getElementById('notesCount').textContent       = notes.length;
+            document.getElementById('assignmentsCount').textContent  = assignments.length;
+            document.getElementById('noticesCount').textContent      = notices.length;
+
+            renderNotes(notes.slice(0, 5));
+
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function renderNotes(notes) {
+        const container = document.getElementById('notesList');
+        if (notes.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>No notes uploaded yet. <a href="notes.html">Upload your first note!</a></p>
+                </div>`;
+            return;
+        }
+        container.innerHTML = notes.map(n => `
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">${n.title}</span>
+                    <span class="badge badge-${n.subject}">${n.subject}</span>
+                </div>
+                <p class="card-meta">
+                    Uploaded on ${formatDate(n.created_at)} •
+                    <a href="${n.file}" target="_blank" style="color:#1a73e8;">View PDF</a>
+                </p>
+            </div>
+        `).join('');
+    }
+
+    function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString('en-IN', {
+            day: 'numeric', month: 'short', year: 'numeric'
+        });
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = '../index.html';
+    }
+
+    loadDashboard();
+</script>
+
+</body>
+</html>

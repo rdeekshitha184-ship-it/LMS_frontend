@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignments</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">🏫 LMS — Student</div>
+    <div class="user-info">
+        <span>👋 <strong id="navUsername"></strong></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<div class="layout">
+    <div class="sidebar">
+        <a href="dashboard.html">🏠 <span>Dashboard</span></a>
+        <a href="notes.html">📚 <span>Notes</span></a>
+        <a href="assignments.html" class="active">📝 <span>Assignments</span></a>
+        <a href="notices.html">📢 <span>Notices</span></a>
+        <a href="timetable.html">🕐 <span>Timetable</span></a>
+    </div>
+
+    <div class="main-content">
+        <h1 class="page-title">📝 Assignments</h1>
+        <p class="page-subtitle">Track your assignments and due dates</p>
+
+        <!-- FILTER TABS -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+            <button class="filter-btn active-filter" 
+                onclick="filterByStatus('all', this)">All</button>
+            <button class="filter-btn" 
+                onclick="filterByStatus('pending', this)">⏳ Pending</button>
+            <button class="filter-btn" 
+                onclick="filterByStatus('soon', this)">⚠️ Due Soon</button>
+            <button class="filter-btn" 
+                onclick="filterByStatus('overdue', this)">🔴 Overdue</button>
+        </div>
+
+        <input type="text" id="filterSubject" 
+            placeholder="🔍 Filter by subject..."
+            oninput="filterNotes()"
+            style="padding:10px 16px;border-radius:8px;border:2px solid #e0e0e0;
+                   font-size:14px;outline:none;width:280px;margin-bottom:16px;">
+
+        <div id="assignmentsList">
+            <div class="loading">Loading assignments...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .filter-btn {
+        padding:8px 18px; border:2px solid #e0e0e0;
+        border-radius:20px; background:white; font-size:13px;
+        cursor:pointer; font-weight:500; transition:all 0.2s;
+    }
+    .filter-btn:hover { border-color:#1a73e8; color:#1a73e8; }
+    .active-filter    { background:#1a73e8 !important;
+                        color:white !important;
+                        border-color:#1a73e8 !important; }
+</style>
+
+<script>
+    const API   = 'https://lms-backend-paui.onrender.com/api';
+    const token = localStorage.getItem('access_token');
+    const role  = localStorage.getItem('role');
+
+    if (!token || role !== 'student') {
+        window.location.href = '../index.html';
+    }
+
+    document.getElementById('navUsername').textContent =
+        localStorage.getItem('username');
+
+    const headers      = { 'Authorization': `Bearer ${token}` };
+    let allAssignments = [];
+    let currentStatus  = 'all';
+
+    async function loadAssignments() {
+        try {
+            const res      = await fetch(`${API}/assignments/`, { headers });
+            allAssignments = await res.json();
+            renderAssignments(allAssignments);
+        } catch (err) {
+            document.getElementById('assignmentsList').innerHTML =
+                '<p style="color:red;">Failed to load.</p>';
+        }
+    }
+
+    function filterByStatus(status, btn) {
+        currentStatus = status;
+        document.querySelectorAll('.filter-btn').forEach(b =>
+            b.classList.remove('active-filter'));
+        btn.classList.add('active-filter');
+        applyFilters();
+    }
+
+    function filterNotes() { applyFilters(); }
+
+    function applyFilters() {
+        const subject = document.getElementById('filterSubject')
+                                .value.toLowerCase();
+        const today   = new Date();
+
+        let filtered = allAssignments.filter(a =>
+            a.subject.toLowerCase().includes(subject));
+
+        if (currentStatus !== 'all') {
+            filtered = filtered.filter(a => {
+                const due      = new Date(a.due_date);
+                const daysLeft = Math.ceil(
+                    (due - today) / (1000 * 60 * 60 * 24));
+                if (currentStatus === 'overdue') return daysLeft < 0;
+                if (currentStatus === 'soon')
+                    return daysLeft >= 0 && daysLeft <= 3;
+                if (currentStatus === 'pending') return daysLeft > 3;
+                return true;
+            });
+        }
+        renderAssignments(filtered);
+    }
+
+    function renderAssignments(assignments) {
+        const container = document.getElementById('assignmentsList');
+        if (assignments.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>No assignments found</p>
+                </div>`;
+            return;
+        }
+
+        const today = new Date();
+        container.innerHTML = assignments.map(a => {
+            const due      = new Date(a.due_date);
+            const daysLeft = Math.ceil(
+                (due - today) / (1000 * 60 * 60 * 24));
+            const dueBadge = daysLeft < 0
+                ? `<span style="color:#ea4335;font-weight:600;">
+                       ⚠️ Overdue by ${Math.abs(daysLeft)} days</span>`
+                : daysLeft === 0
+                ? `<span style="color:#fa7b17;font-weight:600;">
+                       ⚠️ Due Today!</span>`
+                : daysLeft <= 3
+                ? `<span style="color:#fa7b17;font-weight:600;">
+                       ⏰ Due in ${daysLeft} days</span>`
+                : `<span style="color:#34a853;font-weight:600;">
+                       ✅ ${daysLeft} days left</span>`;
+
+            const cardBorder = daysLeft < 0 ? '#ea4335'
+                : daysLeft <= 3 ? '#fa7b17' : '#e0e0e0';
+
+            return `
+            <div class="card" 
+                 style="border-left:4px solid ${cardBorder};">
+                <div class="card-header">
+                    <div>
+                        <span class="card-title">${a.title}</span>
+                        <p style="font-size:14px;color:#555;
+                                  margin-top:6px;">${a.description}</p>
+                    </div>
+                    <span style="background:#e8f0fe;color:#1a73e8;
+                                 padding:4px 12px;border-radius:20px;
+                                 font-size:12px;font-weight:600;
+                                 white-space:nowrap;margin-left:12px;">
+                        ${a.subject}
+                    </span>
+                </div>
+                <div style="display:flex;align-items:center;
+                            justify-content:space-between;
+                            margin-top:12px;flex-wrap:wrap;gap:8px;">
+                    <div>
+                        <p class="card-meta">
+                            📅 Due: <strong>${a.due_date}</strong>
+                        </p>
+                        <p class="card-meta">${dueBadge}</p>
+                    </div>
+                    ${a.file ? `
+                    <a href="${a.file}" target="_blank">
+                        <button class="btn btn-success"
+                            style="width:auto;padding:7px 14px;
+                                   font-size:13px;">
+                            📎 View Attachment
+                        </button>
+                    </a>` : ''}
+                </div>
+            </div>`; }).join('');
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = '../index.html';
+    }
+
+    loadAssignments();
+</script>
+</body>
+</html>

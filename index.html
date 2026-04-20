@@ -1,0 +1,235 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LMS — Login</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<>
+
+<div class="login-container">
+    <div class="login-box">
+        <p class="school-name">🏫 Your School Name</p>
+        <h1>Welcome Back!</h1>
+        <p class="subtitle">Learning Management System</p>
+
+        <div class="alert alert-error" id="errorMsg"></div>
+
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="username" placeholder="Enter your username">
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Enter your password">
+        </div>
+
+        <button class="btn btn-primary" onclick="login()" id="loginBtn">
+            Login
+        </button>
+    </div>
+</div>
+
+<script>
+const API = 'https://lms-backend-paui.onrender.com/api';
+
+async function login() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorMsg = document.getElementById('errorMsg');
+    const btn = document.getElementById('loginBtn');
+
+    if (!username || !password) {
+        showError('Please enter username and password');
+        return;
+    }
+
+    btn.textContent = 'Logging in...';
+    btn.disabled = true;
+    errorMsg.style.display = 'none';
+
+    try {
+        // Step 1: Get token
+        const res = await fetch(`${API}/auth/login/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            showError('Invalid username or password');
+            btn.textContent = 'Login';
+            btn.disabled = false;
+            return;
+        }
+
+        // Step 2: Save token
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
+
+        // Step 3: Get profile
+        const profileRes = await fetch(`${API}/auth/profile/`, {
+            headers: { 'Authorization': `Bearer ${data.access}` }
+        });
+        const profile = await profileRes.json();
+
+        // Step 4: Save user info
+        localStorage.setItem('username', profile.username);
+        localStorage.setItem('role', profile.role);
+
+        // Step 5: Redirect
+        if (profile.role === 'teacher') {
+            window.location.href = 'teacher/dashboard.html';
+        } else if (profile.role === 'student') {
+            window.location.href = 'student/dashboard.html';
+        } else {
+            showError('Your account has no role set. Please contact admin.');
+            localStorage.clear();
+            btn.textContent = 'Login';
+            btn.disabled = false;
+        }
+
+    } catch (err) {
+        showError('Cannot connect to server. Make sure Django is running.');
+        btn.textContent = 'Login';
+        btn.disabled = false;
+    }
+}
+
+function showError(msg) {
+    const errorMsg = document.getElementById('errorMsg');
+    errorMsg.textContent = msg;
+    errorMsg.style.display = 'block';
+}
+
+document.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') login();
+});
+</script>
+
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LMS — Login</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="login-container">
+    <div class="login-box">
+        <p class="school-name">🏫 R R INSTITUTE OF TECHNOLOGY</p>
+        <h1>Welcome Back!</h1>
+        <p class="subtitle">Learning Management System</p>
+
+        <div class="alert alert-error" id="errorMsg"></div>
+
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="username" placeholder="Enter your username">
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Enter your password">
+        </div>
+
+        <button class="btn btn-primary" onclick="login()" id="loginBtn">
+            Login
+        </button>
+
+        <!-- ✅ Register link added here -->
+        <p style="text-align:center; margin-top:16px; font-size:14px; color:#666;">
+            New here? 
+            <a href="register.html" style="color:#1a73e8; font-weight:600;">
+                Register with class code
+            </a>
+        </p>
+
+    </div>
+</div>
+
+<script>
+const API = 'https://lms-backend-paui.onrender.com/api';
+
+async function login() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorMsg = document.getElementById('errorMsg');
+    const btn = document.getElementById('loginBtn');
+
+    if (!username || !password) {
+        showError('Please enter username and password');
+        return;
+    }
+
+    btn.textContent = 'Logging in...';
+    btn.disabled = true;
+    errorMsg.style.display = 'none';
+
+    try {
+        const res = await fetch(`${API}/auth/login/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            showError('Invalid username or password');
+            btn.textContent = 'Login';
+            btn.disabled = false;
+            return;
+        }
+
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
+
+        const profileRes = await fetch(`${API}/auth/profile/`, {
+            headers: { 'Authorization': `Bearer ${data.access}` }
+        });
+        const profile = await profileRes.json();
+
+        localStorage.setItem('username', profile.username);
+        localStorage.setItem('role', profile.role);
+
+        if (profile.role === 'teacher') {
+            window.location.href = 'teacher/dashboard.html';
+        } else if (profile.role === 'student') {
+            window.location.href = 'student/dashboard.html';
+        } else {
+            showError('Your account has no role set. Please contact admin.');
+            localStorage.clear();
+            btn.textContent = 'Login';
+            btn.disabled = false;
+        }
+
+    } catch (err) {
+        showError('Cannot connect to server.');
+        btn.textContent = 'Login';
+        btn.disabled = false;
+    }
+}
+
+function showError(msg) {
+    const errorMsg = document.getElementById('errorMsg');
+    errorMsg.textContent = msg;
+    errorMsg.style.display = 'block';
+}
+
+document.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') login();
+});
+</script>
+
+</body>
+</html>

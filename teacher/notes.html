@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Notes</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="logo">🏫 LMS — Teacher</div>
+    <div class="user-info">
+        <span>👋 <strong id="navUsername"></strong></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <a href="dashboard.html">🏠 <span>Dashboard</span></a>
+        <a href="notes.html" class="active">📚 <span>Upload Notes</span></a>
+        <a href="assignments.html">📝 <span>Assignments</span></a>
+        <a href="notices.html">📢 <span>Post Notices</span></a>
+        <a href="timetable.html">🕐 <span>Timetable</span></a>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-content">
+        <h1 class="page-title">📚 Upload Notes</h1>
+        <p class="page-subtitle">Upload subject-wise PDF notes for students</p>
+
+        <!-- UPLOAD FORM -->
+        <div class="card" style="max-width: 600px; margin-bottom: 28px;">
+            <h2 style="font-size:16px; font-weight:600; margin-bottom:18px; color:#333;">
+                ➕ Upload New Note
+            </h2>
+
+            <div class="alert alert-error"   id="errorMsg"></div>
+            <div class="alert alert-success" id="successMsg"></div>
+
+            <!-- <div class="form-group">
+                <label>Subject</label>
+                <select id="subject">
+                    <option value="">-- Select Subject --</option>
+                    <option value="math">Mathematics</option>
+                    <option value="science">Science</option>
+                    <option value="english">English</option>
+                    <option value="history">History</option>
+                    <option value="geography">Geography</option>
+                    <option value="physics">Physics</option>
+                    <option value="chemistry">Chemistry</option>
+                    <option value="biology">Biology</option>
+                    <option value="cs">Computer Science</option>
+                </select>
+            </div> -->
+            <div class="form-group">
+                 <label>Subject</label>
+                 <input type="text" id="subject" placeholder="e.g. Mathematics, CS101, Physics...">
+            </div>
+
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="title" placeholder="e.g. Chapter 1 - Algebra">
+            </div>
+
+            <div class="form-group">
+                <label>Description (optional)</label>
+                <textarea id="description" rows="3" 
+                    placeholder="Brief description of this note..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>PDF File</label>
+                <input type="file" id="pdfFile" accept=".pdf">
+            </div>
+
+            <button class="btn btn-primary" onclick="uploadNote()" id="uploadBtn">
+                📤 Upload Note
+            </button>
+        </div>
+
+        <!-- NOTES LIST -->
+        <h2 style="font-size:17px; margin-bottom:14px; color:#333;">
+            📋 All Uploaded Notes
+        </h2>
+
+        <!-- FILTER BY SUBJECT -->
+        <div style="margin-bottom:16px;">
+            <!-- <select id="filterSubject" onchange="filterNotes()" 
+                style="padding:8px 16px; border-radius:8px; border:2px solid #e0e0e0; 
+                       font-size:14px; outline:none; cursor:pointer;">
+                <option value="">All Subjects</option>
+                <option value="math">Mathematics</option>
+                <option value="science">Science</option>
+                <option value="english">English</option>
+                <option value="history">History</option>
+                <option value="geography">Geography</option>
+                <option value="physics">Physics</option>
+                <option value="chemistry">Chemistry</option>
+                <option value="biology">Biology</option>
+                <option value="cs">Computer Science</option>
+            </select> -->
+            <input type="text" id="filterSubject" placeholder="🔍 Filter by subject name..." 
+             oninput="filterNotes()"
+             style="padding:10px 16px; border-radius:8px; border:2px solid #e0e0e0; 
+           font-size:14px; outline:none; width:300px;">
+        </div>
+
+        <div id="notesList">
+            <div class="loading">Loading notes...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = 'https://lms-backend-paui.onrender.com/api';
+    const token = localStorage.getItem('access_token');
+    const role  = localStorage.getItem('role');
+
+    // Check login
+    if (!token || role !== 'teacher') {
+        window.location.href = '../index.html';
+    }
+
+    document.getElementById('navUsername').textContent = localStorage.getItem('username');
+
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    // Store all notes
+    let allNotes = [];
+
+    // ── UPLOAD NOTE ──
+    async function uploadNote() {
+        const subject     = document.getElementById('subject').value;
+        const title       = document.getElementById('title').value.trim();
+        const description = document.getElementById('description').value.trim();
+        const fileInput   = document.getElementById('pdfFile');
+        const btn         = document.getElementById('uploadBtn');
+
+        // Validation
+        if (!subject) { showError('Please select a subject'); return; }
+        if (!title)   { showError('Please enter a title'); return; }
+        if (!fileInput.files[0]) { showError('Please select a PDF file'); return; }
+
+        btn.textContent = '⏳ Uploading...';
+        btn.disabled = true;
+        hideMessages();
+
+        // Use FormData for file upload
+        const formData = new FormData();
+        formData.append('subject',     subject);
+        formData.append('title',       title);
+        formData.append('description', description);
+        formData.append('file',        fileInput.files[0]);
+
+        try {
+            const res = await fetch(`${API}/notes/`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                showSuccess('✅ Note uploaded successfully!');
+                // Clear form
+                document.getElementById('subject').value     = '';
+                document.getElementById('title').value       = '';
+                document.getElementById('description').value = '';
+                fileInput.value = '';
+                // Reload notes list
+                loadNotes();
+            } else {
+                showError('Upload failed. Please try again.');
+            }
+
+        } catch (err) {
+            showError('Cannot connect to server.');
+        } finally {
+            btn.textContent = '📤 Upload Note';
+            btn.disabled = false;
+        }
+    }
+
+    // ── LOAD ALL NOTES ──
+    async function loadNotes() {
+        try {
+            const res  = await fetch(`${API}/notes/`, { headers });
+            allNotes   = await res.json();
+            renderNotes(allNotes);
+        } catch (err) {
+            document.getElementById('notesList').innerHTML = 
+                '<p style="color:red;">Failed to load notes.</p>';
+        }
+    }
+
+    // ── FILTER NOTES ──
+    function filterNotes() {
+        const subject = document.getElementById('filterSubject').value;
+        if (subject) {
+            renderNotes(allNotes.filter(n => n.subject === subject));
+        } else {
+            renderNotes(allNotes);
+        }
+    }
+
+    // ── RENDER NOTES ──
+    function renderNotes(notes) {
+        const container = document.getElementById('notesList');
+        if (notes.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>No notes found. Upload your first note above!</p>
+                </div>`;
+            return;
+        }
+        container.innerHTML = notes.map(n => `
+            <div class="card" id="note-${n.id}">
+                <div class="card-header">
+                    <div>
+                        <span class="card-title">${n.title}</span>
+                        <p class="card-meta" style="margin-top:4px;">
+                            ${n.description || 'No description'}
+                        </p>
+                    </div>
+                    <span class="badge badge-${n.subject}">${n.subject}</span>
+                </div>
+                <div style="display:flex; align-items:center; 
+                            justify-content:space-between; margin-top:12px;">
+                    <p class="card-meta">
+                        📅 ${formatDate(n.created_at)} • By ${n.uploaded_by}
+                    </p>
+                    <div style="display:flex; gap:8px;">
+                        <a href="${n.file}" target="_blank">
+                            <button class="btn btn-success" 
+                                style="width:auto; padding:7px 14px; font-size:13px;">
+                                👁️ View PDF
+                            </button>
+                        </a>
+                        <button class="btn btn-danger" onclick="deleteNote(${n.id})">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ── DELETE NOTE ──
+    async function deleteNote(id) {
+        if (!confirm('Are you sure you want to delete this note?')) return;
+
+        try {
+            const res = await fetch(`${API}/notes/${id}/`, {
+                method: 'DELETE',
+                headers
+            });
+
+            if (res.ok) {
+                // Remove from page instantly
+                document.getElementById(`note-${id}`).remove();
+                allNotes = allNotes.filter(n => n.id !== id);
+                showSuccess('🗑️ Note deleted successfully!');
+            }
+        } catch (err) {
+            showError('Failed to delete note.');
+        }
+    }
+
+    // ── HELPERS ──
+    function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString('en-IN', {
+            day: 'numeric', month: 'short', year: 'numeric'
+        });
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('errorMsg');
+        el.textContent = msg;
+        el.style.display = 'block';
+        document.getElementById('successMsg').style.display = 'none';
+    }
+
+    function showSuccess(msg) {
+        const el = document.getElementById('successMsg');
+        el.textContent = msg;
+        el.style.display = 'block';
+        document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    function hideMessages() {
+        document.getElementById('errorMsg').style.display   = 'none';
+        document.getElementById('successMsg').style.display = 'none';
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = '../index.html';
+    }
+
+    // Load notes on page open
+    loadNotes();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notices</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">🏫 LMS — Student</div>
+    <div class="user-info">
+        <span>👋 <strong id="navUsername"></strong></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<div class="layout">
+    <div class="sidebar">
+        <a href="dashboard.html">🏠 <span>Dashboard</span></a>
+        <a href="notes.html">📚 <span>Notes</span></a>
+        <a href="assignments.html">📝 <span>Assignments</span></a>
+        <a href="notices.html" class="active">📢 <span>Notices</span></a>
+        <a href="timetable.html">🕐 <span>Timetable</span></a>
+    </div>
+
+    <div class="main-content">
+        <h1 class="page-title">📢 Notices</h1>
+        <p class="page-subtitle">
+            Stay updated with holidays, events and announcements
+        </p>
+
+        <!-- FILTER -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+            <button class="filter-btn active-filter"
+                onclick="filterNotices('all',this)">All</button>
+            <button class="filter-btn"
+                onclick="filterNotices('general',this)">📌 General</button>
+            <button class="filter-btn"
+                onclick="filterNotices('holiday',this)">🏖️ Holiday</button>
+            <button class="filter-btn"
+                onclick="filterNotices('event',this)">🎉 Event</button>
+        </div>
+
+        <div id="noticesList">
+            <div class="loading">Loading notices...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .filter-btn {
+        padding:8px 18px; border:2px solid #e0e0e0;
+        border-radius:20px; background:white;
+        font-size:13px; cursor:pointer;
+        font-weight:500; transition:all 0.2s;
+    }
+    .filter-btn:hover { border-color:#1a73e8; color:#1a73e8; }
+    .active-filter    { background:#1a73e8 !important;
+                        color:white !important;
+                        border-color:#1a73e8 !important; }
+</style>
+
+<script>
+    const API   = 'https://lms-backend-paui.onrender.com/api';
+    const token = localStorage.getItem('access_token');
+    const role  = localStorage.getItem('role');
+
+    if (!token || role !== 'student') {
+        window.location.href = '../index.html';
+    }
+
+    document.getElementById('navUsername').textContent =
+        localStorage.getItem('username');
+
+    const headers  = { 'Authorization': `Bearer ${token}` };
+    let allNotices = [];
+
+    async function loadNotices() {
+        try {
+            const res  = await fetch(`${API}/notices/`, { headers });
+            allNotices = await res.json();
+            renderNotices(allNotices);
+        } catch (err) {
+            document.getElementById('noticesList').innerHTML =
+                '<p style="color:red;">Failed to load notices.</p>';
+        }
+    }
+
+    function filterNotices(category, btn) {
+        document.querySelectorAll('.filter-btn').forEach(b =>
+            b.classList.remove('active-filter'));
+        btn.classList.add('active-filter');
+        renderNotices(category === 'all'
+            ? allNotices
+            : allNotices.filter(n => n.category === category));
+    }
+
+    function renderNotices(notices) {
+        const container = document.getElementById('noticesList');
+        if (notices.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>No notices found</p>
+                </div>`;
+            return;
+        }
+        const icons  = { holiday:'🏖️', event:'🎉', general:'📌' };
+        const colors = {
+            holiday:'#ea4335', event:'#34a853', general:'#1a73e8'
+        };
+        container.innerHTML = notices.map(n => `
+            <div class="card"
+                 style="border-left:4px solid ${colors[n.category]||'#1a73e8'};">
+                <div class="card-header">
+                    <div>
+                        <span class="card-title">
+                            ${icons[n.category]||'📌'} ${n.title}
+                        </span>
+                        <p style="font-size:14px;color:#555;
+                                  margin-top:8px;line-height:1.6;">
+                            ${n.content}
+                        </p>
+                    </div>
+                    <span class="badge badge-${n.category}"
+                          style="white-space:nowrap;margin-left:12px;">
+                        ${n.category}
+                    </span>
+                </div>
+                <p class="card-meta" style="margin-top:10px;">
+                    📅 ${formatDate(n.created_at)} • By ${n.posted_by}
+                </p>
+            </div>`).join('');
+    }
+
+    function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString('en-IN',
+            { day:'numeric', month:'short', year:'numeric' });
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = '../index.html';
+    }
+
+    loadNotices();
+</script>
+</body>
+</html>

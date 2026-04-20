@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register — LMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="login-container">
+    <div class="login-box">
+        <p class="school-name">🏫 R R INSTITUTE OF TECHNOLOGY</p>
+        <h1>Create Account</h1>
+        <p class="subtitle">Enter your details and class code</p>
+
+        <div class="alert alert-error"   id="errorMsg"></div>
+        <div class="alert alert-success" id="successMsg"></div>
+
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="username" 
+                placeholder="e.g. John_12A or Roll21">
+        </div>
+
+        <div class="form-group">
+            <label>Email (optional)</label>
+            <input type="email" id="email" 
+                placeholder="your@email.com">
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="password" 
+                placeholder="Create a strong password">
+        </div>
+
+        <div class="form-group">
+            <label>Confirm Password</label>
+            <input type="password" id="confirmPassword" 
+                placeholder="Repeat your password">
+        </div>
+
+        <div class="form-group">
+            <label>🔑 Class Code</label>
+            <input type="text" id="classCode" 
+                placeholder="Enter code given by your teacher"
+                style="letter-spacing:2px; font-weight:600;">
+            <small style="color:#888; font-size:12px; 
+                          margin-top:4px; display:block;">
+                Ask your teacher for the class code
+            </small>
+        </div>
+
+        <button class="btn btn-primary" onclick="register()" id="registerBtn">
+            ✅ Create Account
+        </button>
+
+        <p style="text-align:center; margin-top:16px; 
+                  font-size:14px; color:#666;">
+            Already have an account? 
+            <a href="index.html" style="color:#1a73e8; font-weight:600;">
+                Login here
+            </a>
+        </p>
+    </div>
+</div>
+
+<script>
+    const API = 'https://lms-backend-paui.onrender.com/api';
+
+    async function register() {
+        const username        = document.getElementById('username').value.trim();
+        const email           = document.getElementById('email').value.trim();
+        const password        = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const classCode       = document.getElementById('classCode').value.trim();
+        const btn             = document.getElementById('registerBtn');
+
+        if (!username) {
+            showError('Please enter your username'); return;
+        }
+        if (username.length < 3) {
+            showError('Username must be at least 3 characters'); return;
+        }
+        if (!password) {
+            showError('Please enter a password'); return;
+        }
+        if (password.length < 6) {
+            showError('Password must be at least 6 characters'); return;
+        }
+        if (password !== confirmPassword) {
+            showError('Passwords do not match!'); return;
+        }
+        if (!classCode) {
+            showError('Please enter the class code'); return;
+        }
+
+        btn.textContent = '⏳ Creating account...';
+        btn.disabled    = true;
+        hideMessages();
+
+        try {
+            const res = await fetch(`${API}/auth/register/`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({
+                    username,
+                    email,
+                    password,
+                    class_code: classCode
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                showSuccess(
+                    '🎉 Account created! Redirecting to login...'
+                );
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+            } else {
+                if (data.class_code) {
+                    showError(data.class_code[0]);
+                } else if (data.username) {
+                    showError('Username already taken. Try another one.');
+                } else {
+                    showError('Registration failed. Please try again.');
+                }
+            }
+
+        } catch (err) {
+            showError('Cannot connect to server.');
+        } finally {
+            btn.textContent = '✅ Create Account';
+            btn.disabled    = false;
+        }
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('errorMsg');
+        el.textContent   = msg;
+        el.style.display = 'block';
+        document.getElementById('successMsg').style.display = 'none';
+    }
+
+    function showSuccess(msg) {
+        const el = document.getElementById('successMsg');
+        el.textContent   = msg;
+        el.style.display = 'block';
+        document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    function hideMessages() {
+        document.getElementById('errorMsg').style.display   = 'none';
+        document.getElementById('successMsg').style.display = 'none';
+    }
+
+    document.addEventListener('keypress', e => {
+        if (e.key === 'Enter') register();
+    });
+</script>
+
+</body>
+</html>

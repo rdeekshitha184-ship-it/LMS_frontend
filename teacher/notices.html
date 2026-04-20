@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Notices</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="logo">🏫 LMS — Teacher</div>
+    <div class="user-info">
+        <span>👋 <strong id="navUsername"></strong></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <a href="dashboard.html">🏠 <span>Dashboard</span></a>
+        <a href="notes.html">📚 <span>Upload Notes</span></a>
+        <a href="assignments.html">📝 <span>Assignments</span></a>
+        <a href="notices.html" class="active">📢 <span>Post Notices</span></a>
+        <a href="timetable.html">🕐 <span>Timetable</span></a>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-content">
+        <h1 class="page-title">📢 Post Notices</h1>
+        <p class="page-subtitle">Announce holidays, events and important updates</p>
+
+        <!-- POST FORM -->
+        <div class="card" style="max-width:600px; margin-bottom:28px;">
+            <h2 style="font-size:16px; font-weight:600; margin-bottom:18px; color:#333;">
+                ➕ Post New Notice
+            </h2>
+
+            <div class="alert alert-error"   id="errorMsg"></div>
+            <div class="alert alert-success" id="successMsg"></div>
+
+            <div class="form-group">
+                <label>Category</label>
+                <select id="category">
+                    <option value="general">📌 General</option>
+                    <option value="holiday">🏖️ Holiday</option>
+                    <option value="event">🎉 Event</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="title" 
+                    placeholder="e.g. Diwali Holiday Announcement">
+            </div>
+
+            <div class="form-group">
+                <label>Content</label>
+                <textarea id="content" rows="4" 
+                    placeholder="Write your notice here..."></textarea>
+            </div>
+
+            <button class="btn btn-primary" onclick="postNotice()" id="postBtn">
+                📢 Post Notice
+            </button>
+        </div>
+
+        <!-- NOTICES LIST -->
+        <h2 style="font-size:17px; margin-bottom:14px; color:#333;">
+            📋 All Notices
+        </h2>
+
+        <!-- FILTER BY CATEGORY -->
+        <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+            <button class="filter-btn active-filter" onclick="filterNotices('all', this)">
+                All
+            </button>
+            <button class="filter-btn" onclick="filterNotices('general', this)">
+                📌 General
+            </button>
+            <button class="filter-btn" onclick="filterNotices('holiday', this)">
+                🏖️ Holiday
+            </button>
+            <button class="filter-btn" onclick="filterNotices('event', this)">
+                🎉 Event
+            </button>
+        </div>
+
+        <div id="noticesList">
+            <div class="loading">Loading notices...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .filter-btn {
+        padding: 8px 18px;
+        border: 2px solid #e0e0e0;
+        border-radius: 20px;
+        background: white;
+        font-size: 13px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .filter-btn:hover {
+        border-color: #1a73e8;
+        color: #1a73e8;
+    }
+    .active-filter {
+        background: #1a73e8;
+        color: white !important;
+        border-color: #1a73e8;
+    }
+
+    .notice-card {
+        border-left: 4px solid #e0e0e0;
+    }
+    .notice-card.holiday { border-left-color: #ea4335; }
+    .notice-card.event   { border-left-color: #34a853; }
+    .notice-card.general { border-left-color: #1a73e8; }
+</style>
+
+<script>
+    const API   = 'https://lms-backend-paui.onrender.com/api';
+    const token = localStorage.getItem('access_token');
+    const role  = localStorage.getItem('role');
+
+    if (!token || role !== 'teacher') {
+        window.location.href = '../index.html';
+    }
+
+    document.getElementById('navUsername').textContent = localStorage.getItem('username');
+
+    const headers = { 'Authorization': `Bearer ${token}` };
+    let allNotices = [];
+
+    // ── POST NOTICE ──
+    async function postNotice() {
+        const category = document.getElementById('category').value;
+        const title    = document.getElementById('title').value.trim();
+        const content  = document.getElementById('content').value.trim();
+        const btn      = document.getElementById('postBtn');
+
+        if (!title)   { showError('Please enter a title'); return; }
+        if (!content) { showError('Please enter notice content'); return; }
+
+        btn.textContent = '⏳ Posting...';
+        btn.disabled = true;
+        hideMessages();
+
+        try {
+            const res = await fetch(`${API}/notices/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ category, title, content })
+            });
+
+            if (res.ok) {
+                showSuccess('✅ Notice posted successfully!');
+                document.getElementById('title').value   = '';
+                document.getElementById('content').value = '';
+                document.getElementById('category').value = 'general';
+                loadNotices();
+            } else {
+                showError('Failed to post notice. Please try again.');
+            }
+
+        } catch (err) {
+            showError('Cannot connect to server.');
+        } finally {
+            btn.textContent = '📢 Post Notice';
+            btn.disabled = false;
+        }
+    }
+
+    // ── LOAD NOTICES ──
+    async function loadNotices() {
+        try {
+            const res  = await fetch(`${API}/notices/`, { headers });
+            allNotices = await res.json();
+            renderNotices(allNotices);
+        } catch (err) {
+            document.getElementById('noticesList').innerHTML =
+                '<p style="color:red;">Failed to load notices.</p>';
+        }
+    }
+
+    // ── FILTER ──
+    function filterNotices(category, btn) {
+        // Update active button style
+        document.querySelectorAll('.filter-btn').forEach(b => {
+            b.classList.remove('active-filter');
+            b.style.color = '';
+        });
+        btn.classList.add('active-filter');
+
+        if (category === 'all') {
+            renderNotices(allNotices);
+        } else {
+            renderNotices(allNotices.filter(n => n.category === category));
+        }
+    }
+
+    // ── RENDER ──
+    function renderNotices(notices) {
+        const container = document.getElementById('noticesList');
+        if (notices.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>No notices yet. Post your first notice above!</p>
+                </div>`;
+            return;
+        }
+
+        const categoryIcon = {
+            holiday: '🏖️',
+            event:   '🎉',
+            general: '📌'
+        };
+
+        container.innerHTML = notices.map(n => `
+            <div class="card notice-card ${n.category}" id="notice-${n.id}">
+                <div class="card-header">
+                    <div>
+                        <span class="card-title">
+                            ${categoryIcon[n.category]} ${n.title}
+                        </span>
+                        <p style="font-size:14px; color:#555; margin-top:8px; 
+                                  line-height:1.5;">
+                            ${n.content}
+                        </p>
+                    </div>
+                    <span class="badge badge-${n.category}" 
+                          style="white-space:nowrap; margin-left:12px;">
+                        ${n.category}
+                    </span>
+                </div>
+                <div style="display:flex; align-items:center;
+                            justify-content:space-between; margin-top:12px;">
+                    <p class="card-meta">
+                        📅 ${formatDate(n.created_at)} • By ${n.posted_by}
+                    </p>
+                    <button class="btn btn-danger" onclick="deleteNotice(${n.id})">
+                        🗑️ Delete
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ── DELETE ──
+    async function deleteNotice(id) {
+        if (!confirm('Delete this notice?')) return;
+        try {
+            const res = await fetch(`${API}/notices/${id}/`, {
+                method: 'DELETE', headers
+            });
+            if (res.ok) {
+                document.getElementById(`notice-${id}`).remove();
+                allNotices = allNotices.filter(n => n.id !== id);
+                showSuccess('🗑️ Notice deleted!');
+            }
+        } catch (err) {
+            showError('Failed to delete.');
+        }
+    }
+
+    // ── HELPERS ──
+    function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString('en-IN', {
+            day: 'numeric', month: 'short', year: 'numeric'
+        });
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('errorMsg');
+        el.textContent = msg;
+        el.style.display = 'block';
+        document.getElementById('successMsg').style.display = 'none';
+    }
+
+    function showSuccess(msg) {
+        const el = document.getElementById('successMsg');
+        el.textContent = msg;
+        el.style.display = 'block';
+        document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    function hideMessages() {
+        document.getElementById('errorMsg').style.display   = 'none';
+        document.getElementById('successMsg').style.display = 'none';
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = '../index.html';
+    }
+
+    loadNotices();
+</script>
+
+</body>
+</html>

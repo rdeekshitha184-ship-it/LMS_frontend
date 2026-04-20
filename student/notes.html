@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">🏫 LMS — Student</div>
+    <div class="user-info">
+        <span>👋 <strong id="navUsername"></strong></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<div class="layout">
+    <div class="sidebar">
+        <a href="dashboard.html">🏠 <span>Dashboard</span></a>
+        <a href="notes.html" class="active">📚 <span>Notes</span></a>
+        <a href="assignments.html">📝 <span>Assignments</span></a>
+        <a href="notices.html">📢 <span>Notices</span></a>
+        <a href="timetable.html">🕐 <span>Timetable</span></a>
+    </div>
+
+    <div class="main-content">
+        <h1 class="page-title">📚 Subject Notes</h1>
+        <p class="page-subtitle">View and download your subject PDF notes</p>
+
+        <!-- SEARCH & FILTER -->
+        <div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+            <input type="text" id="searchInput" placeholder="🔍 Search notes..."
+                oninput="filterNotes()"
+                style="padding:10px 16px; border-radius:8px;
+                       border:2px solid #e0e0e0; font-size:14px;
+                       outline:none; flex:1; min-width:200px;">
+            <input type="text" id="filterSubject" 
+                placeholder="Filter by subject..."
+                oninput="filterNotes()"
+                style="padding:10px 16px; border-radius:8px;
+                       border:2px solid #e0e0e0; font-size:14px;
+                       outline:none; width:200px;">
+        </div>
+
+        <div id="notesList">
+            <div class="loading">Loading notes...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API   = 'https://lms-backend-paui.onrender.com/api';
+    const token = localStorage.getItem('access_token');
+    const role  = localStorage.getItem('role');
+
+    if (!token || role !== 'student') {
+        window.location.href = '../index.html';
+    }
+
+    document.getElementById('navUsername').textContent =
+        localStorage.getItem('username');
+
+    const headers = { 'Authorization': `Bearer ${token}` };
+    let allNotes  = [];
+
+    async function loadNotes() {
+        try {
+            const res = await fetch(`${API}/notes/`, { headers });
+            allNotes  = await res.json();
+            renderNotes(allNotes);
+        } catch (err) {
+            document.getElementById('notesList').innerHTML =
+                '<p style="color:red;">Failed to load notes.</p>';
+        }
+    }
+
+    function filterNotes() {
+        const search  = document.getElementById('searchInput').value.toLowerCase();
+        const subject = document.getElementById('filterSubject').value.toLowerCase();
+        const filtered = allNotes.filter(n =>
+            (n.title.toLowerCase().includes(search) ||
+             n.subject.toLowerCase().includes(search)) &&
+            n.subject.toLowerCase().includes(subject)
+        );
+        renderNotes(filtered);
+    }
+
+    function renderNotes(notes) {
+        const container = document.getElementById('notesList');
+        if (notes.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>No notes found</p>
+                </div>`;
+            return;
+        }
+        container.innerHTML = notes.map(n => `
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <span class="card-title">📄 ${n.title}</span>
+                        <p class="card-meta" style="margin-top:4px;">
+                            ${n.description || 'No description'}
+                        </p>
+                    </div>
+                    <span style="background:#e8f0fe;color:#1a73e8;
+                                 padding:4px 12px;border-radius:20px;
+                                 font-size:12px;font-weight:600;
+                                 white-space:nowrap;">
+                        ${n.subject}
+                    </span>
+                </div>
+                <div style="display:flex;align-items:center;
+                            justify-content:space-between;margin-top:12px;">
+                    <p class="card-meta">
+                        📅 ${formatDate(n.created_at)} • By ${n.uploaded_by}
+                    </p>
+                    <div style="display:flex;gap:8px;">
+                        <a href="${n.file}" target="_blank">
+                            <button class="btn" 
+                                style="background:#e8f0fe;color:#1a73e8;
+                                       width:auto;padding:7px 14px;
+                                       font-size:13px;font-weight:600;">
+                                👁️ View
+                            </button>
+                        </a>
+                        <a href="${n.file}" download>
+                            <button class="btn btn-success"
+                                style="width:auto;padding:7px 14px;
+                                       font-size:13px;">
+                                ⬇️ Download
+                            </button>
+                        </a>
+                    </div>
+                </div>
+            </div>`).join('');
+    }
+
+    function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString('en-IN',
+            { day:'numeric', month:'short', year:'numeric' });
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = '../index.html';
+    }
+
+    loadNotes();
+</script>
+</body>
+</html>
